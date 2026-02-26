@@ -58,6 +58,16 @@ def load_opus():
     return False
 
 
+import subprocess
+
+result = subprocess.run(["which", "ffmpeg"], capture_output=True, text=True)
+log.info(f"ffmpeg path: {result.stdout.strip()}")
+result2 = subprocess.run(
+    ["find", "/nix", "-name", "libopus*", "-type", "f"], capture_output=True, text=True
+)
+log.info(f"libopus paths: {result2.stdout.strip()}")
+
+
 load_opus()
 
 

@@ -211,7 +211,13 @@ class Music(commands.Cog):
         queue = self.get_queue(ctx)
         position = queue.add(song)
 
-        if not ctx.voice_client.is_playing() and not ctx.voice_client.is_paused():
+        await asyncio.sleep(0.5)  # esperar estado estable
+
+        if (
+            not ctx.voice_client.is_playing()
+            and not ctx.voice_client.is_paused()
+            and not queue.current
+        ):
             await search_msg.delete()
             await self.play_next(ctx)
         else:

@@ -37,11 +37,12 @@ def load_opus():
         return True
 
     candidates = [
-        os.path.join(os.getcwd(), "opus.dll"),
-        "opus.dll",
+        "/nix/var/nix/profiles/default/lib/libopus.so",
+        "/usr/lib/libopus.so.0",
+        "/usr/lib/x86_64-linux-gnu/libopus.so.0",
+        "libopus.so.0",
+        "libopus",
         "opus",
-        "libopus-0.dll",
-        "libopus.dll",
     ]
 
     for name in candidates:

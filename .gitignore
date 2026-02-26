@@ -1,0 +1,51 @@
+# Entorno virtual
+venv/
+env/
+ENV/
+
+# Variables de entorno
+.env
+.env.local
+
+# Archivos de Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Logs
+logs/
+*.log
+
+# Data temporal
+data/temp/
+*.cache
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Sistema
+.DS_Store
+Thumbs.db
+
+*.exe
+ffmpeg
+ffprobe
+
+# Secretos y Sesiones
+cookies.txt
+.env
+*.json
+tokens.py
+
+# Ejecutables (Lo que falló antes)
+*.exe
+ffmpeg
+ffprobe
+
+# Carpetas pesadas
+node_modules/
+__pycache__/

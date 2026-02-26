@@ -1,1 +1,1 @@
-worker: python bot.py
+worker: apt-get update -qq && apt-get install -y ffmpeg libopus0 2>/dev/null; python bot.py

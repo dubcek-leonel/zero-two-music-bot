@@ -32,6 +32,7 @@ class Music(commands.Cog):
         return self.queues[ctx.guild.id]
 
     async def _connect(self, ctx) -> bool:
+        """Conecta el bot al canal de voz del autor."""
         if not ctx.author.voice:
             await ctx.send(f"{Config.EMOJI_ERROR} Debes estar en un canal de voz")
             return False
@@ -50,8 +51,16 @@ class Music(commands.Cog):
                     return True
                 await ctx.voice_client.move_to(channel)
             else:
+                # Si hay un voice_client zombie, desconectarlo primero
+                if ctx.voice_client:
+                    try:
+                        await ctx.voice_client.disconnect(force=True)
+                    except Exception:
+                        pass
+                    await asyncio.sleep(0.5)
+
                 self.connecting.add(guild_id)
-                await channel.connect(timeout=Config.CONNECT_TIMEOUT, reconnect=False)
+                await channel.connect(timeout=Config.CONNECT_TIMEOUT, reconnect=True)
                 self.connecting.discard(guild_id)
                 await asyncio.sleep(Config.CONNECT_SLEEP)
 
@@ -68,6 +77,7 @@ class Music(commands.Cog):
 
         if not ctx.voice_client or not ctx.voice_client.is_connected():
             log.info("play_next: bot no conectado, abortando")
+            queue.current = None
             return
 
         # Cola vacía → esperar y desconectar por inactividad
@@ -97,12 +107,14 @@ class Music(commands.Cog):
             def after_playing(error):
                 if error:
                     log.error(f"after_playing: {error}")
+                # Limpiar current para que el siguiente play_next funcione bien
+                queue.current = next_song  # mantener hasta que inicie el siguiente
                 if ctx.voice_client and ctx.voice_client.is_connected():
                     fut = asyncio.run_coroutine_threadsafe(
                         self.play_next(ctx), self.bot.loop
                     )
                     try:
-                        fut.result(timeout=10)
+                        fut.result(timeout=15)
                     except Exception as e:
                         log.error(f"after_playing fut.result: {e}")
 
@@ -134,9 +146,12 @@ class Music(commands.Cog):
                 )
             else:
                 log.error(f"ClientException en play_next: {e}")
+            queue.current = None
         except Exception as e:
-            log.error(f"play_next: {e}")
+            log.error(f"play_next error: {e}")
             await ctx.send(f"{Config.EMOJI_ERROR} Error al reproducir, saltando...")
+            queue.current = None
+            await asyncio.sleep(1)
             await self.play_next(ctx)
 
     # ──────────────────────────────────────────
@@ -177,15 +192,9 @@ class Music(commands.Cog):
             await ctx.send(f"{Config.EMOJI_ERROR} Debes estar en un canal de voz")
             return
 
-        if not ctx.voice_client:
+        if not ctx.voice_client or not ctx.voice_client.is_connected():
             if not await self._connect(ctx):
                 return
-
-        await asyncio.sleep(1.0)  # ← Agrega esta línea
-
-        if not ctx.voice_client or not ctx.voice_client.is_connected():
-            await ctx.send(f"{Config.EMOJI_ERROR} Error de conexión, intenta `!join`")
-            return
 
         search_msg = await ctx.send(f"{Config.EMOJI_LOADING} Buscando: **{search}**...")
 
@@ -211,8 +220,7 @@ class Music(commands.Cog):
         queue = self.get_queue(ctx)
         position = queue.add(song)
 
-        await asyncio.sleep(0.5)  # esperar estado estable
-
+        # Si no hay nada reproduciéndose Y no hay canción actual → reproducir
         if (
             not ctx.voice_client.is_playing()
             and not ctx.voice_client.is_paused()
@@ -260,9 +268,7 @@ class Music(commands.Cog):
             return
 
         queue = self.get_queue(ctx)
-        # Desactivar loop temporalmente para que after_playing avance
-        # en lugar de repetir la misma canción
-        queue.loop = False
+        queue.loop = False  # ignorar loop al saltar
         ctx.voice_client.stop()
         await ctx.send(f"{Config.EMOJI_SKIP} Canción saltada")
 
